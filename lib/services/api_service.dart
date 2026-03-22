@@ -1,9 +1,14 @@
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
 import '../utils/constants.dart';
 
 class ApiService {
-  static final Dio _dio = Dio(BaseOptions(baseUrl: BASE_URL));
+  static final Dio _dio = Dio(BaseOptions(
+    baseUrl: BASE_URL,
+    connectTimeout: const Duration(seconds: 30),
+    receiveTimeout: const Duration(seconds: 30),
+  ));
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -30,18 +35,22 @@ class ApiService {
     return prefs.getString('userId');
   }
 
-  static Future<Map<String, String>> getHeaders() async {
+  static Future<Options> getAuthOptions() async {
     final token = await getToken();
-    return {
+    return Options(headers: {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
-    };
+    });
   }
 
-  // Auth
+  // ===== AUTH =====
   static Future<Response> register(String name, String phone) async {
     return await _dio.post('/api/auth/register',
         data: {'name': name, 'phone': phone});
+  }
+
+  static Future<Response> login(String phone) async {
+    return await _dio.post('/api/auth/login', data: {'phone': phone});
   }
 
   static Future<Response> verifyOTP(String phone, String token) async {
@@ -50,79 +59,147 @@ class ApiService {
   }
 
   static Future<Response> getProfile() async {
-    final headers = await getHeaders();
     return await _dio.get('/api/auth/profile',
-        options: Options(headers: headers));
+        options: await getAuthOptions());
+  }
+
+  static Future<Response> updateProfile(
+      String name, String about, File? image) async {
+    final token = await getToken();
+    final formData = FormData.fromMap({
+      'name': name,
+      'about': about,
+      if (image != null)
+        'avatar': await MultipartFile.fromFile(image.path,
+            filename: image.path.split('/').last),
+    });
+    return await _dio.put('/api/auth/profile',
+        data: formData,
+        options: Options(headers: {'Authorization': 'Bearer $token'}));
   }
 
   static Future<Response> searchUsers(String query) async {
-    final headers = await getHeaders();
     return await _dio.get('/api/auth/search',
         queryParameters: {'query': query},
-        options: Options(headers: headers));
+        options: await getAuthOptions());
   }
 
-  // Chat
+  // ===== CHAT =====
   static Future<Response> getChats() async {
-    final headers = await getHeaders();
-    return await _dio.get('/api/chat', options: Options(headers: headers));
+    return await _dio.get('/api/chat', options: await getAuthOptions());
   }
 
   static Future<Response> getMessages(String userId) async {
-    final headers = await getHeaders();
     return await _dio.get('/api/chat/$userId',
-        options: Options(headers: headers));
-  }
-
-  static Future<Response> sendMessage(String receiverId, String content,
-      {String type = 'text'}) async {
-    final headers = await getHeaders();
-    return await _dio.post('/api/chat/send',
-        data: {
-          'receiver_id': receiverId,
-          'content': content,
-          'message_type': type
-        },
-        options: Options(headers: headers));
+        options: await getAuthOptions());
   }
 
   static Future<Response> deleteMessage(String messageId) async {
-    final headers = await getHeaders();
     return await _dio.delete('/api/chat/$messageId',
-        options: Options(headers: headers));
+        options: await getAuthOptions());
   }
 
   static Future<Response> getUnreadCounts(String userId) async {
     return await _dio.get('/api/chat/unread/$userId');
   }
 
-  // Groups
+  // ===== GROUPS =====
   static Future<Response> getGroups() async {
-    final headers = await getHeaders();
-    return await _dio.get('/api/group', options: Options(headers: headers));
+    return await _dio.get('/api/group', options: await getAuthOptions());
   }
 
   static Future<Response> getGroupMessages(String groupId) async {
-    final headers = await getHeaders();
     return await _dio.get('/api/group/$groupId/messages',
-        options: Options(headers: headers));
+        options: await getAuthOptions());
   }
 
   static Future<Response> createGroup(
-      String name, String description, List<String> members) async {
-    final headers = await getHeaders();
+      String name, String description) async {
     return await _dio.post('/api/group/create',
-        data: {
-          'name': name,
-          'description': description,
-          'members': members
-        },
-        options: Options(headers: headers));
+        data: {'name': name, 'description': description},
+        options: await getAuthOptions());
   }
 
   static Future<Response> getGroupMembers(String groupId) async {
-    final headers = await getHeaders();
     return await _dio.get('/api/group/$groupId/members',
-        options: Options(headers: headers));
+        options: await getAuthOptions());
+  }
+
+  // ===== STATUS =====
+  static Future<Response> getStatuses() async {
+    return await _dio.get('/api/status', options: await getAuthOptions());
+  }
+
+  static Future<Response> createStatus(
+      String content, String bgColor) async {
+    return await _dio.post('/api/status',
+        data: {'content': content, 'bg_color': bgColor, 'status_type': 'text'},
+        options: await getAuthOptions());
+  }
+
+  static Future<Response> viewStatus(String statusId) async {
+    return await _dio.post('/api/status/$statusId/view',
+        options: await getAuthOptions());
+  }
+
+  static Future<Response> deleteStatus(String statusId) async {
+    return await _dio.delete('/api/status/$statusId',
+        options: await getAuthOptions());
+  }
+
+  // ===== CHANNELS =====
+  static Future<Response> getChannels() async {
+    return await _dio.get('/api/channel', options: await getAuthOptions());
+  }
+
+  static Future<Response> getMyChannels() async {
+    return await _dio.get('/api/channel/my',
+        options: await getAuthOptions());
+  }
+
+  static Future<Response> searchChannels(String query) async {
+    return await _dio.get('/api/channel/search',
+        queryParameters: {'query': query},
+        options: await getAuthOptions());
+  }
+
+  static Future<Response> createChannel(
+      String name, String description) async {
+    return await _dio.post('/api/channel/create',
+        data: {'name': name, 'description': description},
+        options: await getAuthOptions());
+  }
+
+  static Future<Response> subscribeChannel(String channelId) async {
+    return await _dio.post('/api/channel/$channelId/subscribe',
+        options: await getAuthOptions());
+  }
+
+  static Future<Response> getChannelPosts(String channelId) async {
+    return await _dio.get('/api/channel/$channelId/posts',
+        options: await getAuthOptions());
+  }
+
+  // ===== CALLS =====
+  static Future<Response> getCallLogs() async {
+    return await _dio.get('/api/call', options: await getAuthOptions());
+  }
+
+  static Future<Response> saveCallLog(
+      String receiverId, String callType, String status, int duration) async {
+    return await _dio.post('/api/call/save',
+        data: {
+          'receiver_id': receiverId,
+          'call_type': callType,
+          'status': status,
+          'duration': duration,
+        },
+        options: await getAuthOptions());
+  }
+
+  // ===== BACKUP =====
+  static Future<Response> exportBackup() async {
+    return await _dio.get('/api/backup/export',
+        options: await getAuthOptions());
   }
 }

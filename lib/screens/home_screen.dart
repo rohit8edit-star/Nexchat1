@@ -6,7 +6,11 @@ import '../services/socket_service.dart';
 import 'chat_screen.dart';
 import 'group_screen.dart';
 import 'search_screen.dart';
-import 'profile_screen.dart';
+import 'profile/profile_screen.dart';
+import 'status/status_screen.dart';
+import 'channels/channels_screen.dart';
+import 'calls/call_logs_screen.dart';
+import 'calls/call_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,7 +30,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _loadData();
   }
 
@@ -43,7 +47,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       final chatsResponse = await ApiService.getChats();
       final groupsResponse = await ApiService.getGroups();
 
-      // Get unread counts
       if (_userId != null) {
         final unreadResponse = await ApiService.getUnreadCounts(_userId!);
         final unreadData = unreadResponse.data as List;
@@ -73,6 +76,50 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         });
         _loadData();
       }
+    });
+
+    // Incoming call
+    SocketService.onIncomingCall((data) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => AlertDialog(
+          title: Text('${data['caller_name']} ka call aa raha hai!'),
+          content: Text(data['call_type'] == 'video'
+              ? '📹 Video Call'
+              : '📞 Voice Call'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                SocketService.rejectCall(data['caller_id']);
+                Navigator.pop(context);
+              },
+              child: const Text('Decline', style: TextStyle(color: Colors.red)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CallScreen(
+                      userId: data['caller_id'],
+                      userName: data['caller_name'],
+                      isVideo: data['call_type'] == 'video',
+                      isIncoming: true,
+                      offer: data['offer'],
+                    ),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white),
+              child: const Text('Accept'),
+            ),
+          ],
+        ),
+      );
     });
   }
 
@@ -118,7 +165,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           unselectedLabelColor: Colors.white70,
           tabs: const [
             Tab(text: 'CHATS'),
-            Tab(text: 'GROUPS'),
+            Tab(text: 'STATUS'),
+            Tab(text: 'CHANNELS'),
+            Tab(text: 'CALLS'),
           ],
         ),
       ),
@@ -129,21 +178,25 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               controller: _tabController,
               children: [
                 _buildChatList(),
-                _buildGroupList(),
+                const StatusScreen(),
+                const ChannelsScreen(),
+                const CallLogsScreen(),
               ],
             ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF0084FF),
         foregroundColor: Colors.white,
         onPressed: () => Navigator.push(
-            context, MaterialPageRoute(builder: (_) => const SearchScreen())),
+            context,
+            MaterialPageRoute(builder: (_) => const SearchScreen()))
+            .then((_) => _loadData()),
         child: const Icon(Icons.chat),
       ),
     );
   }
 
   Widget _buildChatList() {
-    if (_chats.isEmpty) {
+    if (_chats.isEmpty && _groups.isEmpty) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -159,38 +212,63 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       );
     }
 
+    final allChats = [..._chats, ..._groups];
+
     return RefreshIndicator(
       onRefresh: _loadData,
       child: ListView.builder(
-        itemCount: _chats.length,
+        itemCount: allChats.length,
         itemBuilder: (context, index) {
-          final chat = _chats[index];
-          final unread = _unreadCounts[chat['id']] ?? 0;
+          final chat = allChats[index];
+          final isGroup = index >= _chats.length;
+          final unread = isGroup ? 0 : (_unreadCounts[chat['id']] ?? 0);
+
           return Column(
             children: [
               ListTile(
                 leading: CircleAvatar(
                   radius: 26,
-                  backgroundColor: const Color(0xFF0084FF),
+                  backgroundColor: isGroup
+                      ? const Color(0xFF0066CC)
+                      : const Color(0xFF0084FF),
                   backgroundImage: chat['avatar'] != null
                       ? NetworkImage(
                           'https://api.webzet.store${chat['avatar']}')
                       : null,
                   child: chat['avatar'] == null
-                      ? Text(chat['name'][0].toUpperCase(),
+                      ? Text(
+                          chat['name'][0].toUpperCase(),
                           style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
-                              fontSize: 18))
+                              fontSize: 18),
+                        )
                       : null,
                 ),
                 title: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(chat['name'],
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          if (isGroup)
+                            const Icon(Icons.group,
+                                size: 14, color: Colors.grey),
+                          if (isGroup) const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              chat['name'],
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     Text(
-                      _formatTime(chat['created_at']),
+                      _formatTime(chat['created_at'] ??
+                          chat['last_message_time']),
                       style: TextStyle(
                         fontSize: 12,
                         color: unread > 0
@@ -205,11 +283,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   children: [
                     Expanded(
                       child: Text(
-                        chat['content'] ?? '',
+                        chat['content'] ?? chat['last_message'] ?? '',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: unread > 0 ? Colors.black87 : Colors.grey,
+                          color:
+                              unread > 0 ? Colors.black87 : Colors.grey,
                           fontWeight: unread > 0
                               ? FontWeight.w500
                               : FontWeight.normal,
@@ -234,81 +313,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   ],
                 ),
                 onTap: () {
-                  setState(() => _unreadCounts[chat['id']] = 0);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ChatScreen(
-                        userId: chat['id'],
-                        userName: chat['name'],
-                        userAvatar: chat['avatar'],
+                  if (isGroup) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => GroupScreen(
+                          groupId: chat['id'],
+                          groupName: chat['name'],
+                        ),
                       ),
-                    ),
-                  ).then((_) => _loadData());
+                    ).then((_) => _loadData());
+                  } else {
+                    setState(() => _unreadCounts[chat['id']] = 0);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ChatScreen(
+                          userId: chat['id'],
+                          userName: chat['name'],
+                          userAvatar: chat['avatar'],
+                        ),
+                      ),
+                    ).then((_) => _loadData());
+                  }
                 },
-              ),
-              const Divider(height: 1, indent: 80),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildGroupList() {
-    if (_groups.isEmpty) {
-      return const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.group_outlined, size: 80, color: Colors.grey),
-            SizedBox(height: 16),
-            Text('Koi group nahi hai abhi!',
-                style: TextStyle(color: Colors.grey, fontSize: 16)),
-          ],
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: _loadData,
-      child: ListView.builder(
-        itemCount: _groups.length,
-        itemBuilder: (context, index) {
-          final group = _groups[index];
-          return Column(
-            children: [
-              ListTile(
-                leading: CircleAvatar(
-                  radius: 26,
-                  backgroundColor: const Color(0xFF0066CC),
-                  child: Text(group['name'][0].toUpperCase(),
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18)),
-                ),
-                title: Text(group['name'],
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text(
-                  group['last_message'] ?? 'Group banaya gaya',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.grey),
-                ),
-                trailing: Text(
-                  _formatTime(group['last_message_time']),
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => GroupScreen(
-                      groupId: group['id'],
-                      groupName: group['name'],
-                    ),
-                  ),
-                ).then((_) => _loadData()),
               ),
               const Divider(height: 1, indent: 80),
             ],

@@ -76,6 +76,61 @@ class SocketService {
     _socket?.emit('delete_message', {'message_id': messageId, 'receiver_id': receiverId});
   }
 
+  // ===== CALL EVENTS =====
+  static void callUser(String callerId, String receiverId, String callType, dynamic offer) {
+    _socket?.emit('call_user', {
+      'caller_id': callerId,
+      'receiver_id': receiverId,
+      'call_type': callType,
+      'offer': offer,
+    });
+  }
+
+  static void answerCall(String callerId, dynamic answer) {
+    _socket?.emit('answer_call', {
+      'caller_id': callerId,
+      'answer': answer,
+    });
+  }
+
+  static void rejectCall(String callerId) {
+    _socket?.emit('reject_call', {'caller_id': callerId});
+  }
+
+  static void endCall(String otherId, String callType, int duration) {
+    _socket?.emit('end_call', {
+      'other_id': otherId,
+      'call_type': callType,
+      'duration': duration,
+      'status': 'completed',
+    });
+  }
+
+  static void onIncomingCall(Function(dynamic) callback) {
+    _socket?.off('incoming_call');
+    _socket?.on('incoming_call', callback);
+  }
+
+  static void onCallAnswered(Function(dynamic) callback) {
+    _socket?.off('call_answered');
+    _socket?.on('call_answered', callback);
+  }
+
+  static void onCallRejected(Function(dynamic) callback) {
+    _socket?.off('call_rejected');
+    _socket?.on('call_rejected', callback);
+  }
+
+  static void onCallEnded(Function(dynamic) callback) {
+    _socket?.off('call_ended');
+    _socket?.on('call_ended', callback);
+  }
+
+  static void onCallFailed(Function(dynamic) callback) {
+    _socket?.off('call_failed');
+    _socket?.on('call_failed', callback);
+  }
+
   static bool isConnected() {
     return _socket?.connected ?? false;
   }
