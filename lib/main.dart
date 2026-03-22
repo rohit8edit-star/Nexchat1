@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/splash_screen.dart';
 
 void main() async {
@@ -17,14 +16,14 @@ class NexChatApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF00A884),
+          seedColor: const Color(0xFF0084FF),
           brightness: Brightness.light,
         ),
         useMaterial3: true,
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF00A884),
+          seedColor: const Color(0xFF0084FF),
           brightness: Brightness.dark,
         ),
         useMaterial3: true,

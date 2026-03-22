@@ -40,21 +40,26 @@ class ApiService {
 
   // Auth
   static Future<Response> register(String name, String phone) async {
-    return await _dio.post('/api/auth/register', data: {'name': name, 'phone': phone});
+    return await _dio.post('/api/auth/register',
+        data: {'name': name, 'phone': phone});
   }
 
   static Future<Response> verifyOTP(String phone, String token) async {
-    return await _dio.post('/api/auth/verify-otp', data: {'phone': phone, 'token': token});
+    return await _dio.post('/api/auth/verify-otp',
+        data: {'phone': phone, 'token': token});
   }
 
   static Future<Response> getProfile() async {
     final headers = await getHeaders();
-    return await _dio.get('/api/auth/profile', options: Options(headers: headers));
+    return await _dio.get('/api/auth/profile',
+        options: Options(headers: headers));
   }
 
   static Future<Response> searchUsers(String query) async {
     final headers = await getHeaders();
-    return await _dio.get('/api/auth/search', queryParameters: {'query': query}, options: Options(headers: headers));
+    return await _dio.get('/api/auth/search',
+        queryParameters: {'query': query},
+        options: Options(headers: headers));
   }
 
   // Chat
@@ -65,19 +70,30 @@ class ApiService {
 
   static Future<Response> getMessages(String userId) async {
     final headers = await getHeaders();
-    return await _dio.get('/api/chat/$userId', options: Options(headers: headers));
+    return await _dio.get('/api/chat/$userId',
+        options: Options(headers: headers));
   }
 
-  static Future<Response> sendMessage(String receiverId, String content, {String type = 'text'}) async {
+  static Future<Response> sendMessage(String receiverId, String content,
+      {String type = 'text'}) async {
     final headers = await getHeaders();
     return await _dio.post('/api/chat/send',
-        data: {'receiver_id': receiverId, 'content': content, 'message_type': type},
+        data: {
+          'receiver_id': receiverId,
+          'content': content,
+          'message_type': type
+        },
         options: Options(headers: headers));
   }
 
   static Future<Response> deleteMessage(String messageId) async {
     final headers = await getHeaders();
-    return await _dio.delete('/api/chat/$messageId', options: Options(headers: headers));
+    return await _dio.delete('/api/chat/$messageId',
+        options: Options(headers: headers));
+  }
+
+  static Future<Response> getUnreadCounts(String userId) async {
+    return await _dio.get('/api/chat/unread/$userId');
   }
 
   // Groups
@@ -88,18 +104,25 @@ class ApiService {
 
   static Future<Response> getGroupMessages(String groupId) async {
     final headers = await getHeaders();
-    return await _dio.get('/api/group/$groupId/messages', options: Options(headers: headers));
+    return await _dio.get('/api/group/$groupId/messages',
+        options: Options(headers: headers));
   }
 
-  static Future<Response> createGroup(String name, String description, List<String> members) async {
+  static Future<Response> createGroup(
+      String name, String description, List<String> members) async {
     final headers = await getHeaders();
     return await _dio.post('/api/group/create',
-        data: {'name': name, 'description': description, 'members': members},
+        data: {
+          'name': name,
+          'description': description,
+          'members': members
+        },
         options: Options(headers: headers));
   }
 
   static Future<Response> getGroupMembers(String groupId) async {
     final headers = await getHeaders();
-    return await _dio.get('/api/group/$groupId/members', options: Options(headers: headers));
+    return await _dio.get('/api/group/$groupId/members',
+        options: Options(headers: headers));
   }
 }
