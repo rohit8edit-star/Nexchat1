@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 import '../services/socket_service.dart';
 import '../models/message_model.dart';
+import 'create_poll_screen.dart';
 
 class GroupScreen extends StatefulWidget {
   final String groupId;
@@ -155,6 +156,15 @@ class _GroupScreenState extends State<GroupScreen> {
             ),
           ),
           actions: [
+          IconButton(
+            icon: const Icon(Icons.poll),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => CreatePollScreen(groupId: widget.groupId),
+              ),
+            ),
+          ),
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Close'),
@@ -197,6 +207,15 @@ class _GroupScreenState extends State<GroupScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.poll),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => CreatePollScreen(groupId: widget.groupId),
+              ),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.people),
             onPressed: _showMembers,

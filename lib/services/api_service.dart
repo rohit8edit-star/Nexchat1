@@ -203,3 +203,135 @@ class ApiService {
         options: await getAuthOptions());
   }
 }
+
+  // ===== AI =====
+  static Future<Response> chatWithAi(String message) async {
+    return await _dio.post('/api/ai/chat-simple',
+        data: {'message': message},
+        options: await getAuthOptions());
+  }
+
+  static Future<Response> getAiHistory() async {
+    return await _dio.get('/api/ai/history',
+        options: await getAuthOptions());
+  }
+
+  static Future<Response> clearAiHistory() async {
+    return await _dio.delete('/api/ai/history',
+        options: await getAuthOptions());
+  }
+
+  // ===== MEDIA =====
+  static Future<Response> uploadMedia(File file, String type) async {
+    final token = await getToken();
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(file.path,
+          filename: file.path.split('/').last),
+    });
+    return await _dio.post('/api/media/upload',
+        data: formData,
+        options: Options(headers: {'Authorization': 'Bearer $token'}));
+  }
+
+  // ===== EXTRAS =====
+  static Future<Response> addReaction(String messageId, String emoji) async {
+    return await _dio.post('/api/extras/reaction/$messageId',
+        data: {'emoji': emoji},
+        options: await getAuthOptions());
+  }
+
+  static Future<Response> starMessage(String messageId) async {
+    return await _dio.post('/api/extras/star/$messageId',
+        options: await getAuthOptions());
+  }
+
+  static Future<Response> getStarredMessages() async {
+    return await _dio.get('/api/extras/starred',
+        options: await getAuthOptions());
+  }
+
+  static Future<Response> shareLocation(String? receiverId, String? groupId,
+      double lat, double lng, String address) async {
+    return await _dio.post('/api/share/location',
+        data: {
+          'receiver_id': receiverId,
+          'group_id': groupId,
+          'lat': lat,
+          'lng': lng,
+          'address': address,
+        },
+        options: await getAuthOptions());
+  }
+
+  static Future<Response> searchMessages(String query) async {
+    return await _dio.get('/api/extras/search',
+        queryParameters: {'query': query},
+        options: await getAuthOptions());
+  }
+
+  // ===== MUTE/ARCHIVE =====
+  static Future<Response> muteChat(String chatId, String chatType) async {
+    return await _dio.post('/api/extras/mute',
+        data: {'chatId': chatId, 'chatType': chatType},
+        options: await getAuthOptions());
+  }
+
+  static Future<Response> unmuteChat(String chatId) async {
+    return await _dio.delete('/api/extras/mute/$chatId',
+        options: await getAuthOptions());
+  }
+
+  static Future<Response> archiveChat(String chatId, String chatType) async {
+    return await _dio.post('/api/extras/archive',
+        data: {'chatId': chatId, 'chatType': chatType},
+        options: await getAuthOptions());
+  }
+
+  static Future<Response> unarchiveChat(String chatId) async {
+    return await _dio.delete('/api/extras/archive/$chatId',
+        options: await getAuthOptions());
+  }
+
+  // ===== POLLS =====
+  static Future<Response> createPoll(String question, List<String> options,
+      {String? groupId, String? channelId}) async {
+    return await _dio.post('/api/extras/poll',
+        data: {
+          'question': question,
+          'options': options,
+          'groupId': groupId,
+          'channelId': channelId,
+        },
+        options: await getAuthOptions());
+  }
+
+  static Future<Response> votePoll(String pollId, int optionIndex) async {
+    return await _dio.post('/api/extras/poll/$pollId/vote',
+        data: {'optionIndex': optionIndex},
+        options: await getAuthOptions());
+  }
+
+  static Future<Response> getPoll(String pollId) async {
+    return await _dio.get('/api/extras/poll/$pollId',
+        options: await getAuthOptions());
+  }
+
+  // ===== LINK PREVIEW =====
+  static Future<Response> getLinkPreview(String url) async {
+    return await _dio.get('/api/linkpreview',
+        queryParameters: {'url': url},
+        options: await getAuthOptions());
+  }
+
+  // ===== CONTACT SHARE =====
+  static Future<Response> shareContact(String? receiverId, String? groupId,
+      String contactName, String contactPhone) async {
+    return await _dio.post('/api/share/contact',
+        data: {
+          'receiver_id': receiverId,
+          'group_id': groupId,
+          'contact_name': contactName,
+          'contact_phone': contactPhone,
+        },
+        options: await getAuthOptions());
+  }

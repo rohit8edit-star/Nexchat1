@@ -1,10 +1,15 @@
 import 'package:socket_io_client/socket_io_client.dart' as io;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/constants.dart';
+import 'notification_service.dart';
 
 class SocketService {
   static io.Socket? _socket;
+  static String? _myUserId;
 
-  static void connect(String userId) {
+  static Future<void> connect(String userId) async {
+    _myUserId = userId;
+    
     _socket = io.io(SOCKET_URL, io.OptionBuilder()
         .setTransports(['websocket'])
         .enableAutoConnect()
@@ -19,6 +24,25 @@ class SocketService {
 
     _socket!.onReconnect((_) {
       _socket!.emit('user_online', userId);
+    });
+
+    // Auto show notifications for incoming messages
+    _socket!.on('new_message', (data) async {
+      final prefs = await SharedPreferences.getInstance();
+      final myId = prefs.getString('userId');
+      
+      if (data['receiver_id'] == myId && data['sender_id'] != myId) {
+        final senderName = data['sender_name'] ?? 'Someone';
+        final content = data['message_type'] == 'text'
+            ? data['content'] ?? ''
+            : '📎 ${data['message_type']}';
+        
+        await NotificationService.showMessageNotification(
+          senderName: senderName,
+          message: content,
+          senderId: data['sender_id'],
+        );
+      }
     });
   }
 

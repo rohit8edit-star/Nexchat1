@@ -11,6 +11,11 @@ class MessageModel {
   final String createdAt;
   final String? senderName;
   final String? senderAvatar;
+  final String? replyTo;
+  final String? forwardedFrom;
+  final Map<String, dynamic>? reactions;
+  final double? locationLat;
+  final double? locationLng;
 
   MessageModel({
     required this.id,
@@ -25,6 +30,11 @@ class MessageModel {
     required this.createdAt,
     this.senderName,
     this.senderAvatar,
+    this.replyTo,
+    this.forwardedFrom,
+    this.reactions,
+    this.locationLat,
+    this.locationLng,
   });
 
   factory MessageModel.fromJson(Map<String, dynamic> json) {
@@ -41,6 +51,17 @@ class MessageModel {
       createdAt: json['created_at'],
       senderName: json['sender_name'],
       senderAvatar: json['sender_avatar'],
+      replyTo: json['reply_to'],
+      forwardedFrom: json['forwarded_from'],
+      reactions: json['reactions'] != null
+          ? Map<String, dynamic>.from(json['reactions'])
+          : null,
+      locationLat: json['location_lat'] != null
+          ? double.tryParse(json['location_lat'].toString())
+          : null,
+      locationLng: json['location_lng'] != null
+          ? double.tryParse(json['location_lng'].toString())
+          : null,
     );
   }
 }

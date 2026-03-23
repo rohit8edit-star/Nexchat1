@@ -3,14 +3,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 import '../services/socket_service.dart';
+import '../widgets/chat_list_tile.dart';
 import 'chat_screen.dart';
 import 'group_screen.dart';
 import 'search_screen.dart';
+import 'message_search_screen.dart';
 import 'profile/profile_screen.dart';
 import 'status/status_screen.dart';
 import 'channels/channels_screen.dart';
 import 'calls/call_logs_screen.dart';
 import 'calls/call_screen.dart';
+import 'ai_screen.dart';
+import 'create_group_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,18 +23,17 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _chats = [];
   List<dynamic> _groups = [];
   Map<String, int> _unreadCounts = {};
   bool _isLoading = true;
   String? _userId;
+  int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
     _loadData();
   }
 
@@ -78,13 +81,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       }
     });
 
-    // Incoming call
     SocketService.onIncomingCall((data) {
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (_) => AlertDialog(
-          title: Text('${data['caller_name']} ka call aa raha hai!'),
+          title: Text('${data['caller_name']} ka call!'),
           content: Text(data['call_type'] == 'video'
               ? '📹 Video Call'
               : '📞 Voice Call'),
@@ -94,7 +96,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 SocketService.rejectCall(data['caller_id']);
                 Navigator.pop(context);
               },
-              child: const Text('Decline', style: TextStyle(color: Colors.red)),
+              child: const Text('Decline',
+                  style: TextStyle(color: Colors.red)),
             ),
             ElevatedButton(
               onPressed: () {
@@ -123,80 +126,162 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     });
   }
 
-  String _formatTime(String? time) {
-    if (time == null) return '';
-    try {
-      final dt = DateTime.parse(time).toLocal();
-      final now = DateTime.now();
-      if (dt.day == now.day && dt.month == now.month && dt.year == now.year) {
-        return DateFormat('hh:mm a').format(dt);
-      }
-      return DateFormat('dd/MM/yy').format(dt);
-    } catch (e) {
-      return '';
-    }
+  void _showNewChatOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: Color(0xFF0084FF),
+                child: Icon(Icons.person, color: Colors.white),
+              ),
+              title: const Text('New Chat'),
+              subtitle: const Text('Kisi se baat karo'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const SearchScreen()))
+                    .then((_) => _loadData());
+              },
+            ),
+            ListTile(
+              leading: const CircleAvatar(
+                backgroundColor: Color(0xFF0066CC),
+                child: Icon(Icons.group, color: Colors.white),
+              ),
+              title: const Text('New Group'),
+              subtitle: const Text('Group banao'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const CreateGroupScreen()))
+                    .then((_) => _loadData());
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF0084FF),
-        foregroundColor: Colors.white,
-        title: const Text('NexChat',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search),
-            onPressed: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const SearchScreen())),
-          ),
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const ProfileScreen())),
-          ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          tabs: const [
-            Tab(text: 'CHATS'),
-            Tab(text: 'STATUS'),
-            Tab(text: 'CHANNELS'),
-            Tab(text: 'CALLS'),
-          ],
-        ),
-      ),
-      body: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFF0084FF)))
-          : TabBarView(
-              controller: _tabController,
+      appBar: _selectedIndex == 0
+          ? AppBar(
+              backgroundColor: const Color(0xFF0084FF),
+              foregroundColor: Colors.white,
+              title: const Text('NexChat',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 22)),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.search),
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const MessageSearchScreen())),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.person),
+                  onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const ProfileScreen())),
+                ),
+              ],
+            )
+          : null,
+      body: _selectedIndex == 0
+          ? _isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                      color: Color(0xFF0084FF)))
+              : _buildChatList()
+          : [
+              const SizedBox(),
+              const StatusScreen(),
+              const ChannelsScreen(),
+              const CallLogsScreen(),
+              const AiScreen(),
+            ][_selectedIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) => setState(() => _selectedIndex = index),
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: const Color(0xFF0084FF),
+        unselectedItemColor: Colors.grey,
+        items: [
+          BottomNavigationBarItem(
+            icon: Stack(
               children: [
-                _buildChatList(),
-                const StatusScreen(),
-                const ChannelsScreen(),
-                const CallLogsScreen(),
+                const Icon(Icons.chat),
+                if (_unreadCounts.values.fold(0, (a, b) => a + b) > 0)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                          color: Colors.red, shape: BoxShape.circle),
+                      child: Text(
+                        _unreadCounts.values
+                            .fold(0, (a, b) => a + b)
+                            .toString(),
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 10),
+                      ),
+                    ),
+                  ),
               ],
             ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF0084FF),
-        foregroundColor: Colors.white,
-        onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const SearchScreen()))
-            .then((_) => _loadData()),
-        child: const Icon(Icons.chat),
+            label: 'Chats',
+          ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.circle_outlined),
+            label: 'Status',
+          ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.campaign_outlined),
+            label: 'Channels',
+          ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.call_outlined),
+            label: 'Calls',
+          ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.auto_awesome),
+            label: 'Nex AI',
+          ),
+        ],
       ),
+      floatingActionButton: _selectedIndex == 0
+          ? FloatingActionButton(
+              backgroundColor: const Color(0xFF0084FF),
+              foregroundColor: Colors.white,
+              onPressed: _showNewChatOptions,
+              child: const Icon(Icons.chat),
+            )
+          : null,
     );
   }
 
   Widget _buildChatList() {
-    if (_chats.isEmpty && _groups.isEmpty) {
+    final allChats = [..._chats, ..._groups];
+
+    if (allChats.isEmpty) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -212,8 +297,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       );
     }
 
-    final allChats = [..._chats, ..._groups];
-
     return RefreshIndicator(
       onRefresh: _loadData,
       child: ListView.builder(
@@ -223,123 +306,35 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           final isGroup = index >= _chats.length;
           final unread = isGroup ? 0 : (_unreadCounts[chat['id']] ?? 0);
 
-          return Column(
-            children: [
-              ListTile(
-                leading: CircleAvatar(
-                  radius: 26,
-                  backgroundColor: isGroup
-                      ? const Color(0xFF0066CC)
-                      : const Color(0xFF0084FF),
-                  backgroundImage: chat['avatar'] != null
-                      ? NetworkImage(
-                          'https://api.webzet.store${chat['avatar']}')
-                      : null,
-                  child: chat['avatar'] == null
-                      ? Text(
-                          chat['name'][0].toUpperCase(),
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18),
-                        )
-                      : null,
-                ),
-                title: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          if (isGroup)
-                            const Icon(Icons.group,
-                                size: 14, color: Colors.grey),
-                          if (isGroup) const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              chat['name'],
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
+          return ChatListTile(
+            chat: chat,
+            isGroup: isGroup,
+            unreadCount: unread,
+            onRefresh: _loadData,
+            onTap: () {
+              if (isGroup) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => GroupScreen(
+                        groupId: chat['id'],
+                        groupName: chat['name']),
+                  ),
+                ).then((_) => _loadData());
+              } else {
+                setState(() => _unreadCounts[chat['id']] = 0);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ChatScreen(
+                      userId: chat['id'],
+                      userName: chat['name'],
+                      userAvatar: chat['avatar'],
                     ),
-                    Text(
-                      _formatTime(chat['created_at'] ??
-                          chat['last_message_time']),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: unread > 0
-                            ? const Color(0xFF0084FF)
-                            : Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-                subtitle: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        chat['content'] ?? chat['last_message'] ?? '',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color:
-                              unread > 0 ? Colors.black87 : Colors.grey,
-                          fontWeight: unread > 0
-                              ? FontWeight.w500
-                              : FontWeight.normal,
-                        ),
-                      ),
-                    ),
-                    if (unread > 0)
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF0084FF),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          unread.toString(),
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                  ],
-                ),
-                onTap: () {
-                  if (isGroup) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => GroupScreen(
-                          groupId: chat['id'],
-                          groupName: chat['name'],
-                        ),
-                      ),
-                    ).then((_) => _loadData());
-                  } else {
-                    setState(() => _unreadCounts[chat['id']] = 0);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ChatScreen(
-                          userId: chat['id'],
-                          userName: chat['name'],
-                          userAvatar: chat['avatar'],
-                        ),
-                      ),
-                    ).then((_) => _loadData());
-                  }
-                },
-              ),
-              const Divider(height: 1, indent: 80),
-            ],
+                  ),
+                ).then((_) => _loadData());
+              }
+            },
           );
         },
       ),
