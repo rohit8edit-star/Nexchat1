@@ -45,7 +45,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     _loadMessages();
-    _loadWallpaper();
+    
     _setupSocket();
     _messageController.addListener(() {
       setState(() => _showVoice = _messageController.text.isEmpty);
@@ -79,23 +79,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  Future<void> _loadWallpaper() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() => _wallpaper = prefs.getString('wallpaper_${widget.userId}') ?? 'default');
-  }
 
-  Color get _wallpaperColor {
-    switch (_wallpaper) {
-      case 'blue': return const Color(0xFFE3F2FD);
-      case 'green': return const Color(0xFFE8F5E9);
-      case 'purple': return const Color(0xFFF3E5F5);
-      case 'orange': return const Color(0xFFFFF3E0);
-      case 'pink': return const Color(0xFFFCE4EC);
-      case 'dark': return const Color(0xFF212121);
-      case 'navy': return const Color(0xFF1A237E);
-      default: return const Color(0xFFF0F2F5);
-    }
-  }
 
   void _setupSocket() {
     SocketService.onNewMessage((data) {
@@ -378,7 +362,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _wallpaperColor,
+      backgroundColor: const Color(0xFFF0F2F5),
       appBar: AppBar(
         backgroundColor: const Color(0xFF0084FF),
         foregroundColor: Colors.white,

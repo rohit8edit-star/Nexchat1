@@ -1,5 +1,4 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notifications =
@@ -8,46 +7,13 @@ class NotificationService {
   static Future<void> init() async {
     const androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
-    const initSettings = InitializationSettings(android: androidSettings);
-
     await _notifications.initialize(
-      initSettings,
-      onDidReceiveNotificationResponse: (details) {},
+      settings: const InitializationSettings(android: androidSettings),
     );
-
-    // Request permissions
     await _notifications
         .resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>()
         ?.requestNotificationsPermission();
-  }
-
-  static Future<void> showNotification({
-    required String title,
-    required String body,
-    String? payload,
-  }) async {
-    const androidDetails = AndroidNotificationDetails(
-      'nexchat_messages',
-      'NexChat Messages',
-      channelDescription: 'NexChat message notifications',
-      importance: Importance.high,
-      priority: Priority.high,
-      showWhen: true,
-      enableVibration: true,
-      playSound: true,
-      icon: '@mipmap/ic_launcher',
-    );
-
-    const notificationDetails = NotificationDetails(android: androidDetails);
-
-    await _notifications.show(
-      DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      title,
-      body,
-      notificationDetails,
-      payload: payload,
-    );
   }
 
   static Future<void> showMessageNotification({
@@ -55,9 +21,18 @@ class NotificationService {
     required String message,
     required String senderId,
   }) async {
-    await showNotification(
+    const androidDetails = AndroidNotificationDetails(
+      'nexchat_messages',
+      'NexChat Messages',
+      channelDescription: 'NexChat notifications',
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+    await _notifications.show(
+      id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
       title: senderName,
       body: message,
+      notificationDetails: const NotificationDetails(android: androidDetails),
       payload: senderId,
     );
   }

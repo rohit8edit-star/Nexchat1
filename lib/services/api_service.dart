@@ -103,6 +103,18 @@ class ApiService {
     return await _dio.get('/api/chat/unread/$userId');
   }
 
+  // ===== MEDIA =====
+  static Future<Response> uploadMedia(File file, String type) async {
+    final token = await getToken();
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(file.path,
+          filename: file.path.split('/').last),
+    });
+    return await _dio.post('/api/media/upload',
+        data: formData,
+        options: Options(headers: {'Authorization': 'Bearer $token'}));
+  }
+
   // ===== GROUPS =====
   static Future<Response> getGroups() async {
     return await _dio.get('/api/group', options: await getAuthOptions());
@@ -113,8 +125,7 @@ class ApiService {
         options: await getAuthOptions());
   }
 
-  static Future<Response> createGroup(
-      String name, String description) async {
+  static Future<Response> createGroup(String name, String description) async {
     return await _dio.post('/api/group/create',
         data: {'name': name, 'description': description},
         options: await getAuthOptions());
@@ -130,8 +141,7 @@ class ApiService {
     return await _dio.get('/api/status', options: await getAuthOptions());
   }
 
-  static Future<Response> createStatus(
-      String content, String bgColor) async {
+  static Future<Response> createStatus(String content, String bgColor) async {
     return await _dio.post('/api/status',
         data: {'content': content, 'bg_color': bgColor, 'status_type': 'text'},
         options: await getAuthOptions());
@@ -153,8 +163,7 @@ class ApiService {
   }
 
   static Future<Response> getMyChannels() async {
-    return await _dio.get('/api/channel/my',
-        options: await getAuthOptions());
+    return await _dio.get('/api/channel/my', options: await getAuthOptions());
   }
 
   static Future<Response> searchChannels(String query) async {
@@ -163,8 +172,7 @@ class ApiService {
         options: await getAuthOptions());
   }
 
-  static Future<Response> createChannel(
-      String name, String description) async {
+  static Future<Response> createChannel(String name, String description) async {
     return await _dio.post('/api/channel/create',
         data: {'name': name, 'description': description},
         options: await getAuthOptions());
@@ -185,8 +193,8 @@ class ApiService {
     return await _dio.get('/api/call', options: await getAuthOptions());
   }
 
-  static Future<Response> saveCallLog(
-      String receiverId, String callType, String status, int duration) async {
+  static Future<Response> saveCallLog(String receiverId, String callType,
+      String status, int duration) async {
     return await _dio.post('/api/call/save',
         data: {
           'receiver_id': receiverId,
@@ -196,13 +204,6 @@ class ApiService {
         },
         options: await getAuthOptions());
   }
-
-  // ===== BACKUP =====
-  static Future<Response> exportBackup() async {
-    return await _dio.get('/api/backup/export',
-        options: await getAuthOptions());
-  }
-}
 
   // ===== AI =====
   static Future<Response> chatWithAi(String message) async {
@@ -219,18 +220,6 @@ class ApiService {
   static Future<Response> clearAiHistory() async {
     return await _dio.delete('/api/ai/history',
         options: await getAuthOptions());
-  }
-
-  // ===== MEDIA =====
-  static Future<Response> uploadMedia(File file, String type) async {
-    final token = await getToken();
-    final formData = FormData.fromMap({
-      'file': await MultipartFile.fromFile(file.path,
-          filename: file.path.split('/').last),
-    });
-    return await _dio.post('/api/media/upload',
-        data: formData,
-        options: Options(headers: {'Authorization': 'Bearer $token'}));
   }
 
   // ===== EXTRAS =====
@@ -250,26 +239,6 @@ class ApiService {
         options: await getAuthOptions());
   }
 
-  static Future<Response> shareLocation(String? receiverId, String? groupId,
-      double lat, double lng, String address) async {
-    return await _dio.post('/api/share/location',
-        data: {
-          'receiver_id': receiverId,
-          'group_id': groupId,
-          'lat': lat,
-          'lng': lng,
-          'address': address,
-        },
-        options: await getAuthOptions());
-  }
-
-  static Future<Response> searchMessages(String query) async {
-    return await _dio.get('/api/extras/search',
-        queryParameters: {'query': query},
-        options: await getAuthOptions());
-  }
-
-  // ===== MUTE/ARCHIVE =====
   static Future<Response> muteChat(String chatId, String chatType) async {
     return await _dio.post('/api/extras/mute',
         data: {'chatId': chatId, 'chatType': chatType},
@@ -289,6 +258,19 @@ class ApiService {
 
   static Future<Response> unarchiveChat(String chatId) async {
     return await _dio.delete('/api/extras/archive/$chatId',
+        options: await getAuthOptions());
+  }
+
+  static Future<Response> searchMessages(String query) async {
+    return await _dio.get('/api/extras/search',
+        queryParameters: {'query': query},
+        options: await getAuthOptions());
+  }
+
+  static Future<Response> forwardMessage(
+      String messageId, List<String> receiverIds) async {
+    return await _dio.post('/api/extras/forward/$messageId',
+        data: {'receiverIds': receiverIds},
         options: await getAuthOptions());
   }
 
@@ -316,14 +298,20 @@ class ApiService {
         options: await getAuthOptions());
   }
 
-  // ===== LINK PREVIEW =====
-  static Future<Response> getLinkPreview(String url) async {
-    return await _dio.get('/api/linkpreview',
-        queryParameters: {'url': url},
+  // ===== SHARE =====
+  static Future<Response> shareLocation(String? receiverId, String? groupId,
+      double lat, double lng, String address) async {
+    return await _dio.post('/api/share/location',
+        data: {
+          'receiver_id': receiverId,
+          'group_id': groupId,
+          'lat': lat,
+          'lng': lng,
+          'address': address,
+        },
         options: await getAuthOptions());
   }
 
-  // ===== CONTACT SHARE =====
   static Future<Response> shareContact(String? receiverId, String? groupId,
       String contactName, String contactPhone) async {
     return await _dio.post('/api/share/contact',
@@ -335,3 +323,17 @@ class ApiService {
         },
         options: await getAuthOptions());
   }
+
+  // ===== LINK PREVIEW =====
+  static Future<Response> getLinkPreview(String url) async {
+    return await _dio.get('/api/linkpreview',
+        queryParameters: {'url': url},
+        options: await getAuthOptions());
+  }
+
+  // ===== BACKUP =====
+  static Future<Response> exportBackup() async {
+    return await _dio.get('/api/backup/export',
+        options: await getAuthOptions());
+  }
+}
